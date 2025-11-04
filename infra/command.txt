@@ -1,0 +1,4 @@
+//Môi trường mặc định sẽ là dev, còn nếu muốn đổi môi trường thì dùng câu lệnh sau: 
+terraform init -reconfigure -backend-config="key=terraform/uat/terraform.tfstate" -var-file="environments/uat.tfvars"
+//Sau đó có thể tiếp tục plan, apply như bình thường
+terraform apply -var-file="environments/uat.tfvars"
