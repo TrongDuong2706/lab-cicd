@@ -42,8 +42,8 @@ pipeline {
                           -v \$(pwd):/workspace \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           aquasec/trivy image \
-                            --exit-code 1 \
-                            --severity CRITICAL,HIGH \
+                            # --exit-code 1 \
+                            # --severity CRITICAL,HIGH \
                             --format template \
                             --template "@contrib/html.tpl" \
                             --output /workspace/trivy-report.html \

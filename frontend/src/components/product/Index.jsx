@@ -50,9 +50,9 @@ export default function ProductIndex(props) {
   className="btn" 
   to="/product/create" 
   style={{ 
-    backgroundColor: 'red',  // nền đỏ
+    backgroundColor: 'blue',  // nền đỏ
     color: 'white',          // chữ trắng cho dễ đọc
-    borderColor: 'red'       // viền cùng màu đỏ
+    borderColor: 'blue'       // viền cùng màu đỏ
   }}
 >
   Create
