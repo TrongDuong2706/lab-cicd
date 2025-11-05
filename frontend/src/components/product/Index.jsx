@@ -49,7 +49,7 @@ export default function ProductIndex(props) {
 <Link 
   className="btn btn-primary" 
   to="/product/create" 
-  style={{ color: 'yellow' }}  // đổi màu chữ ở đây
+  style={{ color: 'red' }}  // đổi màu chữ ở đây
 >
   Create
 </Link>
