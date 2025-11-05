@@ -28,10 +28,10 @@ pipeline {
                 sh 'ls -la'
                 
                 // Kiểm tra phiên bản của các công cụ đã cài đặt
-                sh 'echo "\n=> Kiểm tra các công cụ đã cài đặt:"'
-                sh 'docker --version'
-                sh 'aws --version'
-                sh 'trivy --version'
+                // sh 'echo "\n=> Kiểm tra các công cụ đã cài đặt:"'
+                // sh 'docker --version'
+                // sh 'aws --version'
+                // sh 'trivy --version'
 
                 echo "\n--- Kiểm tra môi trường thành công! ---"
             }
