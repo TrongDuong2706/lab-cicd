@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION  = credentials('AWS_REGION')
-        ECR_REPO    = credentials('ECR_REPO')
+        AWS_REGION  = 'ap-southeast-1'
+        ECR_REPO    = '980921740481.dkr.ecr.ap-southeast-1.amazonaws.com/backend'
         ECS_CLUSTER = credentials('ECS_CLUSTER')
-        ECS_SERVICE = credentials('ECS_SERVICE')
+        ECS_SERVICE = 'backend-service'
         IMAGE_TAG   = credentials('IMAGE_TAG')
     }
 
