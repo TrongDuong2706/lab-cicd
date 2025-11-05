@@ -47,12 +47,17 @@ export default function ProductIndex(props) {
             </tbody>
           </table>
 <Link 
-  className="btn btn-primary" 
+  className="btn" 
   to="/product/create" 
-  style={{ color: 'red' }}  // đổi màu chữ ở đây
+  style={{ 
+    backgroundColor: 'red',  // nền đỏ
+    color: 'white',          // chữ trắng cho dễ đọc
+    borderColor: 'red'       // viền cùng màu đỏ
+  }}
 >
   Create
 </Link>
+
         </div>
       </div>
     </div>
