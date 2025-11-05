@@ -51,3 +51,6 @@ user_data = <<-EOF
     Name = "jenkins-server"
   }
 }
+
+
+//Add thêm docker.io và aws-cli
