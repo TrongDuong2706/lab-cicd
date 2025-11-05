@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-southeast-1'        
-        ECR_REPO = '980921740481.dkr.ecr.ap-southeast-1.amazonaws.com/frontend'
-        ECS_CLUSTER = 'my-ecs-cluster-dev'
-        ECS_SERVICE = 'frontend-service'   // thay tên service của bạn nếu khác
-        IMAGE_TAG = 'latest'
+        AWS_REGION  = credentials('AWS_REGION')
+        ECR_REPO    = credentials('ECR_REPO')
+        ECS_CLUSTER = credentials('ECS_CLUSTER')
+        ECS_SERVICE = credentials('ECS_SERVICE')
+        IMAGE_TAG   = credentials('IMAGE_TAG')
     }
 
     stages {
@@ -19,10 +19,10 @@ pipeline {
 
         stage('2. Build Docker Image') {
             steps {
-                dir('frontend') { 
+                dir('frontend') {
                     echo "Building Docker image..."
                     sh """
-                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                        docker build -t $ECR_REPO:$IMAGE_TAG .
                     """
                 }
             }
@@ -32,8 +32,8 @@ pipeline {
             steps {
                 echo "Authenticating to ECR..."
                 sh """
-                    aws ecr get-login-password --region ${AWS_REGION} | \
-                    docker login --username AWS --password-stdin ${ECR_REPO}
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REPO
                 """
             }
         }
@@ -42,7 +42,7 @@ pipeline {
             steps {
                 echo "Pushing Docker image to ECR..."
                 sh """
-                    docker push ${ECR_REPO}:${IMAGE_TAG}
+                    docker push $ECR_REPO:$IMAGE_TAG
                 """
             }
         }
@@ -52,10 +52,10 @@ pipeline {
                 echo "Updating ECS service to use new image..."
                 sh """
                     aws ecs update-service \
-                        --cluster ${ECS_CLUSTER} \
-                        --service ${ECS_SERVICE} \
+                        --cluster $ECS_CLUSTER \
+                        --service $ECS_SERVICE \
                         --force-new-deployment \
-                        --region ${AWS_REGION}
+                        --region $AWS_REGION
                 """
             }
         }
