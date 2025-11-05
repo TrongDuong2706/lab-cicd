@@ -46,7 +46,13 @@ export default function ProductIndex(props) {
               )}
             </tbody>
           </table>
-          <Link className="btn btn-primary" to="/product/create">Create</Link>
+<Link 
+  className="btn btn-primary" 
+  to="/product/create" 
+  style={{ color: 'yellow' }}  // đổi màu chữ ở đây
+>
+  Create
+</Link>
         </div>
       </div>
     </div>
