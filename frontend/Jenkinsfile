@@ -1,66 +1,75 @@
 pipeline {
-    // Yêu cầu Jenkins chạy trên chính nó (Controller)
     agent any
+
+    environment {
+        AWS_REGION  = credentials('AWS_REGION')
+        ECR_REPO    = credentials('ECR_REPO')
+        ECS_CLUSTER = credentials('ECS_CLUSTER')
+        ECS_SERVICE = credentials('ECS_SERVICE')
+        IMAGE_TAG   = credentials('IMAGE_TAG')
+    }
 
     stages {
         stage('1. Checkout Code') {
             steps {
-                // Bước này để đảm bảo Jenkins kết nối được với Git repo của bạn
                 echo "Checking out source code..."
                 checkout scm
             }
         }
 
-        stage('2. Verify Execution Environment') {
+        stage('2. Build Docker Image') {
             steps {
-                echo "--- Bắt đầu kiểm tra môi trường ---"
-                
-                // Chạy lệnh whoami để xem pipeline đang chạy với user nào
-                sh 'echo "=> Chạy với user:"'
-                sh 'whoami'
-                
-                // Chạy lệnh pwd để xem thư mục làm việc hiện tại
-                sh 'echo "\n=> Thư mục làm việc hiện tại (gốc):"'
-                sh 'pwd'
-
-                // Kiểm tra xem các file trong repo có ở đây không
-                sh 'echo "\n=> Các file trong workspace:"'
-                sh 'ls -la'
-                
-                echo "\n--- Kiểm tra môi trường thành công! ---"
+                dir('frontend') {
+                    echo "Building Docker image..."
+                    sh """
+                        docker build -t $ECR_REPO:$IMAGE_TAG .
+                    """
+                }
             }
         }
 
-        // --- STAGE MỚI ĐỂ LÀM VIỆC BÊN TRONG THƯ MỤC 'backend' ---
-        stage('3. Working in Frontend Directory') {
+        stage('3. Authenticate ECR') {
             steps {
-                // Sử dụng 'dir' để chuyển vào thư mục 'backend'
-                // Tất cả các lệnh bên trong khối này sẽ được thực thi từ thư mục 'backend'
-                dir('frontend') {
-                    echo "--- Đã chuyển vào thư mục 'frontend' ---"
-                    
-                    // Chạy lệnh pwd một lần nữa để xác nhận
-                    sh 'echo "\n=> Thư mục làm việc hiện tại:"'
-                    sh 'pwd'
+                echo "Authenticating to ECR..."
+                sh """
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REPO
+                """
+            }
+        }
 
-                    // Liệt kê các file bên trong thư mục backend
-                    sh 'echo "\n=> Các file trong thư mục frontend:"'
-                    sh 'ls -la'
+        stage('4. Push Docker Image to ECR') {
+            steps {
+                echo "Pushing Docker image to ECR..."
+                sh """
+                    docker push $ECR_REPO:$IMAGE_TAG
+                """
+            }
+        }
 
-                    // !!! BẠN CÓ THỂ THÊM CÁC LỆNH BUILD, TEST CHO BACKEND TẠI ĐÂY !!!
-                    // Ví dụ:
-                    // sh 'mvn clean package' // Nếu dùng Java Maven
-                    // sh 'npm install'       // Nếu dùng Node.js
-                    // sh 'go build'          // Nếu dùng Golang
-                }
+        stage('5. Update ECS Service') {
+            steps {
+                echo "Updating ECS service to use new image..."
+                sh """
+                    aws ecs update-service \
+                        --cluster $ECS_CLUSTER \
+                        --service $ECS_SERVICE \
+                        --force-new-deployment \
+                        --region $AWS_REGION
+                """
             }
         }
     }
 
     post {
-        // Luôn luôn chạy, dù pipeline thành công hay thất bại
         always {
-            echo "Pipeline kiểm tra đã hoàn tất."
+            echo "Frontend pipeline completed."
+        }
+        success {
+            echo "Frontend successfully deployed to ECS!"
+        }
+        failure {
+            echo "Pipeline failed!"
         }
     }
 }
