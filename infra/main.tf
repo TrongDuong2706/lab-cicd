@@ -21,11 +21,17 @@ module "acm" {
   tags            = { Project = "Terraform-VPC", Environment = var.environment }
 }
 
+module "iam_jenkins" {
+  source      = "./common_modules/iam_roles"
+  environment = var.environment
+}
+
 module "jenkins_server" {
   source        = "./common_modules/compute"
   subnet_id     = module.vpc.private_subnet_ids[0]
   private_sg_id = module.security_groups.private_sg_id
   key_name      = var.key_pair_name
+  instance_profile_name = module.iam_jenkins.controller_instance_profile_name
 }
 
 module "ecr" {

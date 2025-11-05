@@ -4,6 +4,7 @@ resource "aws_instance" "jenkins" {
   subnet_id     = var.subnet_id
   key_name      = var.key_name
   vpc_security_group_ids = [var.private_sg_id]
+  iam_instance_profile = var.instance_profile_name
 
   # Thêm user_data để tự động cài Jenkins
 user_data = <<-EOF

@@ -18,3 +18,8 @@ variable "ami_id" {
   type        = string
   default     = "ami-0827b3068f1548bf6" 
 }
+
+variable "instance_profile_name" {
+  description = "Tên của IAM Instance Profile để gắn vào EC2."
+  type        = string
+}

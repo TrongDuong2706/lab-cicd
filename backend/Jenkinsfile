@@ -1,0 +1,45 @@
+pipeline {
+    agent {
+        label 'aws-ecs-fargate'
+    }
+
+    stages {
+        stage('1. Checkout Code') {
+            steps {
+                // Tải toàn bộ source code từ GitHub về không gian làm việc của agent
+                echo "Checking out source code..."
+                checkout scm
+            }
+        }
+
+        stage('2. Verify Backend Environment') {
+            steps {
+                // Di chuyển vào thư mục 'backend' trước khi thực hiện các lệnh
+                dir('backend') {
+                    echo "Pipeline is now running inside the 'backend' directory!"
+                    
+                    // Các lệnh này bây giờ sẽ được thực thi từ bên trong thư mục 'backend'
+                    sh 'echo "--- Who am I? ---"'
+                    sh 'whoami'
+                    
+                    sh 'echo "\n--- Where am I? ---"'
+                    sh 'pwd' // Output bây giờ sẽ là .../workspace/Backend-Pipeline/backend
+                    
+                    sh 'echo "\n--- What files are here? ---"'
+                    sh 'ls -la' // Liệt kê các file trong thư mục backend
+                    
+                    sh 'echo "\n--- What tools do I have? ---"'
+                    sh 'docker --version'
+                    sh 'aws --version'
+                    sh 'trivy --version'
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Pipeline finished. Agent will now be terminated."
+        }
+    }
+}
