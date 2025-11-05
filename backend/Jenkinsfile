@@ -20,20 +20,39 @@ pipeline {
                 sh 'whoami'
                 
                 // Chạy lệnh pwd để xem thư mục làm việc hiện tại
-                sh 'echo "\n=> Thư mục làm việc hiện tại:"'
+                sh 'echo "\n=> Thư mục làm việc hiện tại (gốc):"'
                 sh 'pwd'
 
                 // Kiểm tra xem các file trong repo có ở đây không
                 sh 'echo "\n=> Các file trong workspace:"'
                 sh 'ls -la'
                 
-                // Kiểm tra phiên bản của các công cụ đã cài đặt
-                // sh 'echo "\n=> Kiểm tra các công cụ đã cài đặt:"'
-                // sh 'docker --version'
-                // sh 'aws --version'
-                // sh 'trivy --version'
-
                 echo "\n--- Kiểm tra môi trường thành công! ---"
+            }
+        }
+
+        // --- STAGE MỚI ĐỂ LÀM VIỆC BÊN TRONG THƯ MỤC 'backend' ---
+        stage('3. Working in Backend Directory') {
+            steps {
+                // Sử dụng 'dir' để chuyển vào thư mục 'backend'
+                // Tất cả các lệnh bên trong khối này sẽ được thực thi từ thư mục 'backend'
+                dir('backend') {
+                    echo "--- Đã chuyển vào thư mục 'backend' ---"
+                    
+                    // Chạy lệnh pwd một lần nữa để xác nhận
+                    sh 'echo "\n=> Thư mục làm việc hiện tại:"'
+                    sh 'pwd'
+
+                    // Liệt kê các file bên trong thư mục backend
+                    sh 'echo "\n=> Các file trong thư mục backend:"'
+                    sh 'ls -la'
+
+                    // !!! BẠN CÓ THỂ THÊM CÁC LỆNH BUILD, TEST CHO BACKEND TẠI ĐÂY !!!
+                    // Ví dụ:
+                    // sh 'mvn clean package' // Nếu dùng Java Maven
+                    // sh 'npm install'       // Nếu dùng Node.js
+                    // sh 'go build'          // Nếu dùng Golang
+                }
             }
         }
     }
