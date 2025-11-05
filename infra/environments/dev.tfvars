@@ -15,7 +15,7 @@ public_subnets    = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets   = ["10.0.3.0/24", "10.0.4.0/24"]
 
 # Cấu hình ECR
-ecr_repository_names = ["frontend", "backend", "jenkins-agent"]
+ecr_repository_names = ["frontend", "backend"]
 
 # Cấu hình ECS
 ecs_cluster_name = "my-ecs-cluster"

@@ -22,8 +22,9 @@ module "acm" {
 }
 
 module "iam_jenkins" {
-  source      = "./common_modules/iam_roles"
+  source      = "./common_modules/iam_roles" # Đảm bảo tên thư mục là iam_jenkins
   environment = var.environment
+  # Không cần truyền biến nào khác vào đây nữa
 }
 
 module "jenkins_server" {

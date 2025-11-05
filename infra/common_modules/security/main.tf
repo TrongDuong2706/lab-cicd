@@ -43,6 +43,14 @@ resource "aws_security_group" "private_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.public_sg.id]
   }
+   ingress {
+    description = "Allow Jenkins agents to connect to controller"
+    from_port   = 50000
+    to_port     = 50000
+    protocol    = "tcp"
+    # Cho phép kết nối từ các tài nguyên trong cùng security group
+    self        = true 
+  }
 
   egress {
     from_port   = 0

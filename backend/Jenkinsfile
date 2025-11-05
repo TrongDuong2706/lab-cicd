@@ -1,45 +1,47 @@
 pipeline {
-    agent {
-        label 'aws-ecs-fargate'
-    }
+    // Yêu cầu Jenkins chạy trên chính nó (Controller)
+    agent any
 
     stages {
         stage('1. Checkout Code') {
             steps {
-                // Tải toàn bộ source code từ GitHub về không gian làm việc của agent
+                // Bước này để đảm bảo Jenkins kết nối được với Git repo của bạn
                 echo "Checking out source code..."
                 checkout scm
             }
         }
 
-        stage('2. Verify Backend Environment') {
+        stage('2. Verify Execution Environment') {
             steps {
-                // Di chuyển vào thư mục 'backend' trước khi thực hiện các lệnh
-                dir('backend') {
-                    echo "Pipeline is now running inside the 'backend' directory!"
-                    
-                    // Các lệnh này bây giờ sẽ được thực thi từ bên trong thư mục 'backend'
-                    sh 'echo "--- Who am I? ---"'
-                    sh 'whoami'
-                    
-                    sh 'echo "\n--- Where am I? ---"'
-                    sh 'pwd' // Output bây giờ sẽ là .../workspace/Backend-Pipeline/backend
-                    
-                    sh 'echo "\n--- What files are here? ---"'
-                    sh 'ls -la' // Liệt kê các file trong thư mục backend
-                    
-                    sh 'echo "\n--- What tools do I have? ---"'
-                    sh 'docker --version'
-                    sh 'aws --version'
-                    sh 'trivy --version'
-                }
+                echo "--- Bắt đầu kiểm tra môi trường ---"
+                
+                // Chạy lệnh whoami để xem pipeline đang chạy với user nào
+                sh 'echo "=> Chạy với user:"'
+                sh 'whoami'
+                
+                // Chạy lệnh pwd để xem thư mục làm việc hiện tại
+                sh 'echo "\n=> Thư mục làm việc hiện tại:"'
+                sh 'pwd'
+
+                // Kiểm tra xem các file trong repo có ở đây không
+                sh 'echo "\n=> Các file trong workspace:"'
+                sh 'ls -la'
+                
+                // Kiểm tra phiên bản của các công cụ đã cài đặt
+                sh 'echo "\n=> Kiểm tra các công cụ đã cài đặt:"'
+                sh 'docker --version'
+                sh 'aws --version'
+                sh 'trivy --version'
+
+                echo "\n--- Kiểm tra môi trường thành công! ---"
             }
         }
     }
-    
+
     post {
+        // Luôn luôn chạy, dù pipeline thành công hay thất bại
         always {
-            echo "Pipeline finished. Agent will now be terminated."
+            echo "Pipeline kiểm tra đã hoàn tất."
         }
     }
 }
