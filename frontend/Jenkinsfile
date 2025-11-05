@@ -17,17 +17,7 @@ pipeline {
             }
         }
 
-        stage('2. Authenticate ECR') {
-            steps {
-                echo "Authenticating to ECR..."
-                sh """
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REPO
-                """
-            }
-        }
-
-        stage('3. Build Docker Image') {
+        stage('2. Build Docker Image') {
             steps {
                 dir('frontend') {
                     echo "Building Docker image..."
@@ -38,7 +28,7 @@ pipeline {
             }
         }
 
-        stage('4. Trivy Scan Image') {
+        stage('3. Trivy Scan Image') {
             steps {
                 dir('frontend') {
                     echo "Cleaning Trivy cache..."
@@ -46,18 +36,28 @@ pipeline {
                         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all
                     """
 
-                    echo "Scanning image with Trivy..."
+                    echo "Scanning Docker image with Trivy..."
                     sh """
                         docker run --rm \
-                          -v $(pwd):/workspace \
+                          -v \$(pwd):/workspace \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           aquasec/trivy image \
                             --format template \
-                            --template "/contrib/html.tpl" \
+                            --template "@contrib/html.tpl" \
                             --output /workspace/trivy-report.html \
                             $ECR_REPO:$IMAGE_TAG
                     """
                 }
+            }
+        }
+
+        stage('4. Authenticate ECR') {
+            steps {
+                echo "Authenticating to ECR..."
+                sh """
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REPO
+                """
             }
         }
 
@@ -86,14 +86,15 @@ pipeline {
 
     post {
         always {
-            echo "Archiving Trivy report..."
+            echo "Frontend pipeline completed."
+            // Lưu báo cáo Trivy vào artifacts của Jenkins
             archiveArtifacts artifacts: 'frontend/trivy-report.html', fingerprint: true
         }
         success {
-            echo "✅ Frontend successfully deployed to ECS!"
+            echo "Frontend successfully deployed to ECS!"
         }
         failure {
-            echo "❌ Pipeline failed!"
+            echo "Pipeline failed!"
         }
     }
 }
