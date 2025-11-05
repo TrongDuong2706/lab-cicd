@@ -2,11 +2,14 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION  = credentials('AWS_REGION')
-        ECR_REPO    = credentials('ECR_REPO')
-        ECS_CLUSTER = credentials('ECS_CLUSTER')
-        ECS_SERVICE = credentials('ECS_SERVICE')
-        IMAGE_TAG   = credentials('IMAGE_TAG')
+        AWS_REGION      = credentials('AWS_REGION')
+        ECR_REPO        = credentials('ECR_REPO')
+        ECS_CLUSTER     = credentials('ECS_CLUSTER')
+        ECS_SERVICE     = credentials('ECS_SERVICE')
+        IMAGE_TAG       = credentials('IMAGE_TAG')
+        // Thêm các biến môi trường cho SonarQube
+        SONAR_CLOUD_ORG = "fpt-lab" // <-- THAY THẾ BẰNG ORGANIZATION KEY CỦA BẠN
+        SONAR_PROJECT_KEY = "fpt-cicd-lab"   // <-- THAY THẾ BẰNG PROJECT KEY CỦA BẠN
     }
 
     stages {
@@ -17,7 +20,42 @@ pipeline {
             }
         }
 
-        stage('2. Build Docker Image') {
+        // ================= STAGE MỚI: SONARQUBE ANALYSIS =================
+        stage('2. SonarQube Analysis') {
+            steps {
+                dir('frontend') { // Di chuyển vào thư mục chứa source code cần quét
+                    // Sử dụng tool SonarScanner đã cấu hình trong Global Tool Configuration
+                    withSonarQubeEnv('SonarQubeCloud') { // Tên đã đặt ở bước cấu hình Jenkins
+                        sh """
+                            sonar-scanner \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.organization=${SONAR_CLOUD_ORG} \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=https://sonarcloud.io
+                        """
+                    }
+                }
+            }
+        }
+        
+        // --- Nâng cao: Chờ kết quả Quality Gate ---
+        // stage('2. SonarQube Analysis & Quality Gate') {
+        //     steps {
+        //         dir('frontend') {
+        //             withSonarQubeEnv('SonarQubeCloud') {
+        //                 sh "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.organization=${SONAR_CLOUD_ORG} -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io"
+        //             }
+        //         }
+        //         // Tạm dừng pipeline và chờ kết quả phân tích từ SonarCloud
+        //         // Pipeline sẽ FAILED nếu Quality Gate không đạt
+        //         timeout(time: 15, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
+        // =====================================================================
+
+        stage('3. Build Docker Image') { // Đánh số lại
             steps {
                 dir('frontend') {
                     echo "Building Docker image..."
@@ -28,14 +66,9 @@ pipeline {
             }
         }
 
-        stage('3. Trivy Scan Image') {
+        stage('4. Trivy Scan Image') { // Đánh số lại
             steps {
                 dir('frontend') {
-                    echo "Cleaning Trivy cache..."
-                    sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all
-                    """
-
                     echo "Scanning Docker image with Trivy..."
                     sh """
                         docker run --rm \
@@ -51,7 +84,7 @@ pipeline {
             }
         }
 
-        stage('4. Authenticate ECR') {
+        stage('5. Authenticate ECR') { // Đánh số lại
             steps {
                 echo "Authenticating to ECR..."
                 sh """
@@ -61,7 +94,7 @@ pipeline {
             }
         }
 
-        stage('5. Push Docker Image to ECR') {
+        stage('6. Push Docker Image to ECR') { // Đánh số lại
             steps {
                 echo "Pushing Docker image to ECR..."
                 sh """
@@ -70,7 +103,7 @@ pipeline {
             }
         }
 
-        stage('6. Update ECS Service') {
+        stage('7. Update ECS Service') { // Đánh số lại
             steps {
                 echo "Updating ECS service to use new image..."
                 sh """
@@ -87,7 +120,6 @@ pipeline {
     post {
         always {
             echo "Frontend pipeline completed."
-            // Lưu báo cáo Trivy vào artifacts của Jenkins
             archiveArtifacts artifacts: 'frontend/trivy-report.html', fingerprint: true
         }
         success {
