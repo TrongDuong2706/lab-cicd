@@ -5,7 +5,7 @@ import Service from './Service'
 export default function ProductCreate(props) {
   
   const [ product, setProduct ] = useState({})
-
+  //Test jenkins
   function create(e) {
     e.preventDefault()
     Service.create(product).then(() => {
@@ -14,7 +14,6 @@ export default function ProductCreate(props) {
       alert(e.response.data)
     })
   }
-
   function onChange(e) {
     let data = { ...product }
     data[e.target.name] = e.target.value
