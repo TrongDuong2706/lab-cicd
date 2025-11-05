@@ -25,9 +25,11 @@ pipeline {
             steps {
                 dir('frontend') { // Di chuyển vào thư mục chứa source code cần quét
                     // Sử dụng tool SonarScanner đã cấu hình trong Global Tool Configuration
+                    def scannerHome = tool 'SonarScanner-Version' 
+
                     withSonarQubeEnv('SonarQubeCloud') { // Tên đã đặt ở bước cấu hình Jenkins
                         sh """
-                            sonar-scanner \
+                            ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.organization=${SONAR_CLOUD_ORG} \
                                 -Dsonar.sources=. \
