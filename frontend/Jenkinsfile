@@ -8,8 +8,8 @@ pipeline {
         ECS_SERVICE     = credentials('ECS_SERVICE')
         IMAGE_TAG       = credentials('IMAGE_TAG')
         // Thêm các biến môi trường cho SonarQube
-        SONAR_CLOUD_ORG = "fpt-lab" // <-- THAY THẾ BẰNG ORGANIZATION KEY CỦA BẠN
-        SONAR_PROJECT_KEY = "fpt-cicd-lab"   // <-- THAY THẾ BẰNG PROJECT KEY CỦA BẠN
+        SONAR_CLOUD_ORG = "fpt-lab"
+        SONAR_PROJECT_KEY = "fpt-cicd-lab"
     }
 
     stages {
@@ -20,21 +20,24 @@ pipeline {
             }
         }
 
-        // ================= STAGE MỚI: SONARQUBE ANALYSIS =================
+        // ================= STAGE MỚI: SONARQUBE ANALYSIS (ĐÃ SỬA LỖI) =================
         stage('2. SonarQube Analysis') {
             steps {
                 dir('frontend') { // Di chuyển vào thư mục chứa source code cần quét
-                    // Sử dụng tool SonarScanner đã cấu hình trong Global Tool Configuration
-                    def scannerHome = tool 'SonarScanner-Version' 
+                    // Bọc các lệnh Groovy và steps liên quan trong khối 'script'
+                    script {
+                        // Sử dụng tool SonarScanner đã cấu hình trong Global Tool Configuration
+                        def scannerHome = tool 'SonarScanner-Version' 
 
-                    withSonarQubeEnv('SonarQubeCloud') { // Tên đã đặt ở bước cấu hình Jenkins
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                -Dsonar.organization=${SONAR_CLOUD_ORG} \
-                                -Dsonar.sources=. \
-                                -Dsonar.host.url=https://sonarcloud.io
-                        """
+                        withSonarQubeEnv('SonarQubeCloud') { // Tên đã đặt ở bước cấu hình Jenkins
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                    -Dsonar.organization=${SONAR_CLOUD_ORG} \
+                                    -Dsonar.sources=. \
+                                    -Dsonar.host.url=https://sonarcloud.io
+                            """
+                        }
                     }
                 }
             }
@@ -44,14 +47,17 @@ pipeline {
         // stage('2. SonarQube Analysis & Quality Gate') {
         //     steps {
         //         dir('frontend') {
-        //             withSonarQubeEnv('SonarQubeCloud') {
-        //                 sh "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.organization=${SONAR_CLOUD_ORG} -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io"
+        //             script {
+        //                 def scannerHome = tool 'SonarScanner-Version'
+        //                 withSonarQubeEnv('SonarQubeCloud') {
+        //                     sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.organization=${SONAR_CLOUD_ORG} -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io"
+        //                 }
+        //                 // Tạm dừng pipeline và chờ kết quả phân tích từ SonarCloud
+        //                 // Pipeline sẽ FAILED nếu Quality Gate không đạt
+        //                 timeout(time: 15, unit: 'MINUTES') {
+        //                     waitForQualityGate abortPipeline: true
+        //                 }
         //             }
-        //         }
-        //         // Tạm dừng pipeline và chờ kết quả phân tích từ SonarCloud
-        //         // Pipeline sẽ FAILED nếu Quality Gate không đạt
-        //         timeout(time: 15, unit: 'MINUTES') {
-        //             waitForQualityGate abortPipeline: true
         //         }
         //     }
         // }
