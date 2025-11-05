@@ -1,0 +1,66 @@
+pipeline {
+    // Yêu cầu Jenkins chạy trên chính nó (Controller)
+    agent any
+
+    stages {
+        stage('1. Checkout Code') {
+            steps {
+                // Bước này để đảm bảo Jenkins kết nối được với Git repo của bạn
+                echo "Checking out source code..."
+                checkout scm
+            }
+        }
+
+        stage('2. Verify Execution Environment') {
+            steps {
+                echo "--- Bắt đầu kiểm tra môi trường ---"
+                
+                // Chạy lệnh whoami để xem pipeline đang chạy với user nào
+                sh 'echo "=> Chạy với user:"'
+                sh 'whoami'
+                
+                // Chạy lệnh pwd để xem thư mục làm việc hiện tại
+                sh 'echo "\n=> Thư mục làm việc hiện tại (gốc):"'
+                sh 'pwd'
+
+                // Kiểm tra xem các file trong repo có ở đây không
+                sh 'echo "\n=> Các file trong workspace:"'
+                sh 'ls -la'
+                
+                echo "\n--- Kiểm tra môi trường thành công! ---"
+            }
+        }
+
+        // --- STAGE MỚI ĐỂ LÀM VIỆC BÊN TRONG THƯ MỤC 'backend' ---
+        stage('3. Working in Backend Directory') {
+            steps {
+                // Sử dụng 'dir' để chuyển vào thư mục 'backend'
+                // Tất cả các lệnh bên trong khối này sẽ được thực thi từ thư mục 'backend'
+                dir('frontend') {
+                    echo "--- Đã chuyển vào thư mục 'frontend' ---"
+                    
+                    // Chạy lệnh pwd một lần nữa để xác nhận
+                    sh 'echo "\n=> Thư mục làm việc hiện tại:"'
+                    sh 'pwd'
+
+                    // Liệt kê các file bên trong thư mục backend
+                    sh 'echo "\n=> Các file trong thư mục frontend:"'
+                    sh 'ls -la'
+
+                    // !!! BẠN CÓ THỂ THÊM CÁC LỆNH BUILD, TEST CHO BACKEND TẠI ĐÂY !!!
+                    // Ví dụ:
+                    // sh 'mvn clean package' // Nếu dùng Java Maven
+                    // sh 'npm install'       // Nếu dùng Node.js
+                    // sh 'go build'          // Nếu dùng Golang
+                }
+            }
+        }
+    }
+
+    post {
+        // Luôn luôn chạy, dù pipeline thành công hay thất bại
+        always {
+            echo "Pipeline kiểm tra đã hoàn tất."
+        }
+    }
+}
