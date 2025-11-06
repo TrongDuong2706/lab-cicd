@@ -8,7 +8,7 @@ pipeline {
         ECS_SERVICE     = credentials('ECS_SERVICE_BE')
         IMAGE_TAG       = credentials('IMAGE_TAG')
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
-        SONAR_PROJECT_KEY = credentials('SONAR_PROJECT_KEY') 
+        SONAR_PROJECT_KEY = "fpt-lab-backend"
     }
 
     stages {
