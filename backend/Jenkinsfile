@@ -32,11 +32,12 @@ pipeline {
                     steps {
                         dir('backend') {
                             script {
-                                // withSonarQubeEnv sẽ cung cấp 2 biến quan trọng:
-                                // 1. SONAR_HOST_URL (https://sonarcloud.io)
-                                // 2. SONAR_TOKEN (giá trị token của bạn, VIẾT HOA)
+                                // Tách tên image ra một biến Groovy riêng để tránh lỗi Jenkins Secret Masking
+                                def scannerImage = 'sonarsource/sonar-scanner-dotnet:latest'
+
                                 withSonarQubeEnv('SonarQubeCloud') {
-                                    sh '''
+                                    // Sử dụng dấu nháy kép """ để nội suy biến ${scannerImage}
+                                    sh """
                                         docker run --rm \
                                             -e SONAR_HOST_URL=\$SONAR_HOST_URL \
                                             -e SONAR_TOKEN=\$SONAR_TOKEN \
@@ -45,7 +46,7 @@ pipeline {
                                             -v "\$(pwd):/usr/src" \
                                             -v "\$HOME/.nuget/packages:/root/.nuget/packages" \
                                             -w /usr/src \
-                                            sonarsource/sonar-scanner-dotnet:latest \
+                                            ${scannerImage} \
                                             sh -c ' \
                                                 dotnet sonarscanner begin \
                                                     /k:"\$SONAR_PROJECT_KEY_BE" \
@@ -57,7 +58,7 @@ pipeline {
                                                 && dotnet build App.csproj \
                                                 && dotnet sonarscanner end /d:sonar.login="\$SONAR_TOKEN" \
                                             '
-                                    '''
+                                    """
                                 }
 
                                 // Đợi kết quả Quality Gate
