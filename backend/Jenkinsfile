@@ -7,7 +7,7 @@ pipeline {
         ECS_CLUSTER     = credentials('ECS_CLUSTER')
         ECS_SERVICE     = credentials('ECS_SERVICE_BE')
         // Đổi tên biến để tránh xung đột với string literal ":latest" trong stage SonarQube
-        DOCKER_IMAGE_VERSION = credentials('IMAGE_TAG')
+        DOCKER_IMAGE_VERSION = "latest"
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY_BE = credentials('SONAR_PROJECT_KEY_BE')
     }
