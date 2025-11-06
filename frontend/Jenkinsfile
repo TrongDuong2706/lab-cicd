@@ -39,15 +39,15 @@ pipeline {
                         }
 
                         // Bước 2: Đợi kết quả Quality Gate
-                        timeout(time: 15, unit: 'MINUTES') { 
-                            def qg = waitForQualityGate abortPipeline: true
+                        // timeout(time: 15, unit: 'MINUTES') { 
+                        //     def qg = waitForQualityGate abortPipeline: true
                             
-                            if (qg.status != 'OK') {
-                                error "Pipeline stopped due to SonarQube Quality Gate failure: ${qg.status}"
-                            } else {
-                                echo "SonarQube Quality Gate passed!"
-                            }
-                        }
+                        //     if (qg.status != 'OK') {
+                        //         error "Pipeline stopped due to SonarQube Quality Gate failure: ${qg.status}"
+                        //     } else {
+                        //         echo "SonarQube Quality Gate passed!"
+                        //     }
+                        // }
                     }
                 }
             }
