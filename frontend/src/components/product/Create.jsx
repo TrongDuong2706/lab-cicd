@@ -19,15 +19,6 @@ export default function ProductCreate(props) {
     data[e.target.name] = e.target.value
     setProduct(data)
   }
-  //make
-  function test(e) {
-  e.preventDefault()
-  let x = 10 / 0; // bug tiềm ẩn (division by zero)
-  console.log(x);
-  Service.create(product).then(() => {
-    props.history.push('/product')
-  })
-}
 
   return (
     <div className="container">
