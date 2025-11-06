@@ -6,8 +6,8 @@ pipeline {
         ECR_REPO        = credentials('ECR_REPO_BE')
         ECS_CLUSTER     = credentials('ECS_CLUSTER')
         ECS_SERVICE     = credentials('ECS_SERVICE_BE')
-        IMAGE_TAG       = credentials('IMAGE_TAG')
-        // Các credentials này sẽ được Jenkins tự động nạp vào môi trường
+        // Đổi tên biến để tránh xung đột với string literal ":latest" trong stage SonarQube
+        DOCKER_IMAGE_VERSION = credentials('IMAGE_TAG')
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY_BE = credentials('SONAR_PROJECT_KEY_BE')
     }
@@ -27,33 +27,29 @@ pipeline {
                     }
                 }
 
-                // ================= STAGE 2 ĐÃ ĐƯỢC SỬA LẠI HOÀN CHỈNH =================
                 stage('2. SonarQube Analysis & Quality Gate Check') {
                     steps {
                         dir('backend') {
                             script {
-                                // Tách tên image ra một biến Groovy riêng để tránh lỗi Jenkins Secret Masking
-                                def scannerImage = 'sonarsource/sonar-scanner-dotnet:latest'
-
                                 withSonarQubeEnv('SonarQubeCloud') {
-                                    // Sử dụng dấu nháy kép """ để nội suy biến ${scannerImage}
+                                    // Sử dụng dấu nháy kép để Jenkins/shell thay thế các biến môi trường
                                     sh """
                                         docker run --rm \
                                             -e SONAR_HOST_URL=\$SONAR_HOST_URL \
                                             -e SONAR_TOKEN=\$SONAR_TOKEN \
                                             -e SONAR_PROJECT_KEY_BE=\$SONAR_PROJECT_KEY_BE \
                                             -e SONAR_CLOUD_ORG=\$SONAR_CLOUD_ORG \
+                                            -e BRANCH_NAME=\$BRANCH_NAME \
                                             -v "\$(pwd):/usr/src" \
                                             -v "\$HOME/.nuget/packages:/root/.nuget/packages" \
                                             -w /usr/src \
-                                            ${scannerImage} \
+                                            sonarsource/sonar-scanner-dotnet:latest \
                                             sh -c ' \
                                                 dotnet sonarscanner begin \
                                                     /k:"\$SONAR_PROJECT_KEY_BE" \
                                                     /o:"\$SONAR_CLOUD_ORG" \
                                                     /d:sonar.host.url="\$SONAR_HOST_URL" \
                                                     /d:sonar.login="\$SONAR_TOKEN" \
-                                                    /d:sonar.branch.name="\$BRANCH_NAME" \
                                                     /d:sonar.exclusions="**/*.html,**/obj/**,**/bin/**" \
                                                 && dotnet build App.csproj \
                                                 && dotnet sonarscanner end /d:sonar.login="\$SONAR_TOKEN" \
@@ -79,7 +75,8 @@ pipeline {
                     steps {
                         dir('backend') {
                             echo "Building Docker image..."
-                            sh "docker build -t $ECR_REPO:$IMAGE_TAG ."
+                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
+                            sh "docker build -t $ECR_REPO:$DOCKER_IMAGE_VERSION ."
                         }
                     }
                 }
@@ -88,6 +85,7 @@ pipeline {
                     steps {
                         dir('backend') {
                             echo "Scanning Docker image with Trivy..."
+                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
                             sh """
                                 docker run --rm \
                                   -v \$(pwd):/workspace \
@@ -96,7 +94,7 @@ pipeline {
                                     --format template \
                                     --template "@contrib/html.tpl" \
                                     --output /workspace/trivy-report.html \
-                                    $ECR_REPO:$IMAGE_TAG
+                                    $ECR_REPO:$DOCKER_IMAGE_VERSION
                             """
                         }
                     }
@@ -114,8 +112,11 @@ pipeline {
 
                 stage('6. Push Docker Image to ECR') {
                     steps {
-                        echo "Pushing Docker image to ECR..."
-                        sh "docker push $ECR_REPO:$IMAGE_TAG"
+                        dir('backend') {
+                            echo "Pushing Docker image to ECR..."
+                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
+                            sh "docker push $ECR_REPO:$DOCKER_IMAGE_VERSION"
+                        }
                     }
                 }
 
