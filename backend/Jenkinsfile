@@ -9,6 +9,8 @@ pipeline {
         IMAGE_VERSION   = 'latest'
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY_BE = credentials('SONAR_PROJECT_KEY_BE')
+        // Ghi lại ID của credential chứa token SonarCloud của bạn
+        SONAR_CREDENTIALS_ID = 'sonar-token' 
     }
 
     stages {
@@ -26,21 +28,29 @@ pipeline {
                     }
                 }
 
+                // ================= STAGE 2 ĐÃ ĐƯỢC THAY THẾ HOÀN TOÀN =================
                 stage('2. SonarQube Analysis') {
                     steps {
                         dir('backend') {
-                            script {
-                                // withSonarQubeEnv cung cấp $SONAR_TOKEN (viết hoa) và $SONAR_HOST_URL
-                                withSonarQubeEnv('SonarQubeCloud') {
-                                    sh """
-                                        docker build -f Dockerfile.sonar -t backend-sonar-scan:latest \
-                                            --build-arg SONAR_HOST_URL=\$SONAR_HOST_URL \
-                                            --build-arg SONAR_TOKEN=\$SONAR_TOKEN \
-                                            --build-arg SONAR_PROJECT_KEY_BE=\$SONAR_PROJECT_KEY_BE \
-                                            --build-arg SONAR_CLOUD_ORG=\$SONAR_CLOUD_ORG \
-                                            .
-                                    """
-                                }
+                            // Sử dụng withCredentials để lấy token một cách an toàn và đáng tin cậy
+                            withCredentials([string(credentialsId: SONAR_CREDENTIALS_ID, variable: 'SONAR_TOKEN_VALUE')]) {
+                                sh """
+                                    docker run --rm \
+                                        -e SONAR_TOKEN=${SONAR_TOKEN_VALUE} \
+                                        -v "\$(pwd):/usr/src" \
+                                        -v "\$HOME/.nuget/packages:/root/.nuget/packages" \
+                                        -w /usr/src \
+                                        sonarsource/sonar-scanner-dotnet:latest \
+                                        sh -c ' \
+                                            dotnet sonarscanner begin \
+                                                /k:"${SONAR_PROJECT_KEY_BE}" \
+                                                /o:"${SONAR_CLOUD_ORG}" \
+                                                /d:sonar.host.url="https://sonarcloud.io" \
+                                                /d:sonar.exclusions="**/*.html,**/obj/**,**/bin/**" \
+                                            && dotnet build App.csproj \
+                                            && dotnet sonarscanner end \
+                                        '
+                                """
                             }
                         }
                     }
@@ -120,4 +130,4 @@ pipeline {
             echo "Pipeline failed!"
         }
     }
-}
+}```
