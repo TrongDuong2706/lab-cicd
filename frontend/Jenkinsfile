@@ -12,102 +12,105 @@ pipeline {
     }
 
     stages {
-        stage('1. Checkout Code') {
-            steps {
-                echo "Checking out source code..."
-                checkout scm
+        // ================= STAGE CHA CHỨA ĐIỀU KIỆN =================
+        stage('Build and Deploy Frontend') {
+            when {
+                expression {
+                    // Chỉ chạy khi có file thay đổi trong thư mục 'frontend/'
+                    return sh(returnStatus: true, script: "git diff --name-only HEAD~1 HEAD | grep -q 'frontend/'") == 0
+                }
             }
-        }
-        stage('2. SonarQube Analysis & Quality Gate Check') {
-            steps {
-                dir('frontend') {
-                    script {
-                        def scannerHome = tool 'SonarScanner-Version' 
-
-                        withSonarQubeEnv('SonarQubeCloud') {
-                            sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                    -Dsonar.organization=${SONAR_CLOUD_ORG} \
-                                    -Dsonar.sources=. \
-                                    -Dsonar.host.url=https://sonarcloud.io 
-                            """
-                        }
-                        // timeout(time: 15, unit: 'MINUTES') { 
-                        //     def qg = waitForQualityGate abortPipeline: true
-                            
-                        //     if (qg.status != 'OK') {
-                        //         error "Pipeline stopped due to SonarQube Quality Gate failure: ${qg.status}"
-                        //     } else {
-                        //         echo "SonarQube Quality Gate passed!"
-                        //     }
-                        // }
+            // ================= TẤT CẢ CÁC STAGE CON NẰM TRONG ĐÂY =================
+            stages {
+                stage('1. Checkout Code') {
+                    steps {
+                        echo "Checking out source code..."
+                        checkout scm
                     }
                 }
-            }
-        }
 
-        stage('3. Build Docker Image') {
-            steps {
-                dir('frontend') {
-                    echo "Building Docker image..."
-                    sh """
-                        docker build -t $ECR_REPO:$IMAGE_TAG .
-                    """
+                stage('2. SonarQube Analysis & Quality Gate Check') {
+                    steps {
+                        dir('frontend') {
+                            script {
+                                def scannerHome = tool 'SonarScanner-Version' 
+                                withSonarQubeEnv('SonarQubeCloud') {
+                                    sh """
+                                        ${scannerHome}/bin/sonar-scanner \
+                                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                            -Dsonar.organization=${SONAR_CLOUD_ORG} \
+                                            -Dsonar.sources=. \
+                                            -Dsonar.host.url=https://sonarcloud.io
+                                    """
+                                }
+                                // timeout(time: 15, unit: 'MINUTES') { 
+                                //     def qg = waitForQualityGate abortPipeline: true
+                                //     ...
+                                // }
+                            }
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('4. Trivy Scan Image') {
-            steps {
-                dir('frontend') {
-                    echo "Scanning Docker image with Trivy..."
-                    sh """
-                        docker run --rm \
-                          -v \$(pwd):/workspace \
-                          -v /var/run/docker.sock:/var/run/docker.sock \
-                          aquasec/trivy image \
-                            --format template \
-                            --template "@contrib/html.tpl" \
-                            --output /workspace/trivy-report.html \
-                            $ECR_REPO:$IMAGE_TAG
-                    """
+                stage('3. Build Docker Image') {
+                    steps {
+                        dir('frontend') {
+                            echo "Building Docker image..."
+                            sh "docker build -t $ECR_REPO:$IMAGE_TAG ."
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('5. Authenticate ECR') {
-            steps {
-                echo "Authenticating to ECR..."
-                sh """
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REPO
-                """
-            }
-        }
+                stage('4. Trivy Scan Image') {
+                    steps {
+                        dir('frontend') {
+                            echo "Scanning Docker image with Trivy..."
+                            sh """
+                                docker run --rm \
+                                  -v \$(pwd):/workspace \
+                                  -v /var/run/docker.sock:/var/run/docker.sock \
+                                  aquasec/trivy image \
+                                    --format template \
+                                    --template "@contrib/html.tpl" \
+                                    --output /workspace/trivy-report.html \
+                                    $ECR_REPO:$IMAGE_TAG
+                            """
+                        }
+                    }
+                }
 
-        stage('6. Push Docker Image to ECR') {
-            steps {
-                echo "Pushing Docker image to ECR..."
-                sh """
-                    docker push $ECR_REPO:$IMAGE_TAG
-                """
-            }
-        }
+                stage('5. Authenticate ECR') {
+                    steps {
+                        echo "Authenticating to ECR..."
+                        sh """
+                            aws ecr get-login-password --region $AWS_REGION | \
+                            docker login --username AWS --password-stdin $ECR_REPO
+                        """
+                    }
+                }
 
-        stage('7. Update ECS Service') {
-            steps {
-                echo "Updating ECS service to use new image..."
-                sh """
-                    aws ecs update-service \
-                        --cluster $ECS_CLUSTER \
-                        --service $ECS_SERVICE \
-                        --force-new-deployment \
-                        --region $AWS_REGION
-                """
-            }
-        }
-    }
+                stage('6. Push Docker Image to ECR') {
+                    steps {
+                        echo "Pushing Docker image to ECR..."
+                        sh "docker push $ECR_REPO:$IMAGE_TAG"
+                    }
+                }
+
+                stage('7. Update ECS Service') {
+                    steps {
+                        echo "Updating ECS service to use new image..."
+                        sh """
+                            aws ecs update-service \
+                                --cluster $ECS_CLUSTER \
+                                --service $ECS_SERVICE \
+                                --force-new-deployment \
+                                --region $AWS_REGION
+                        """
+                    }
+                }
+            } // Đóng khối 'stages' con
+        } // Đóng khối 'stage' cha
+    } // Đóng khối 'stages' chính
 
     post {
         always {

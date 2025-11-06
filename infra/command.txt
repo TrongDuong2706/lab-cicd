@@ -6,11 +6,19 @@ terraform apply -var-file="environments/uat.tfvars"
 terraform apply -var-file="environments/dev.tfvars"
 
 
-
+        For Backend:
         AWS_REGION  = credentials('AWS_REGION')
         ECR_REPO    = credentials('ECR_REPO_BE')
         ECS_CLUSTER = credentials('ECS_CLUSTER')
         ECS_SERVICE = credentials('ECS_SERVICE_BE')
         IMAGE_TAG   = credentials('IMAGE_TAG')
+        SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
+        SONAR_PROJECT_KEY = credentials('SONAR_PROJECT_KEY')
+        For Frontend:
+        AWS_REGION      = credentials('AWS_REGION')
+        ECR_REPO        = credentials('ECR_REPO')
+        ECS_CLUSTER     = credentials('ECS_CLUSTER')
+        ECS_SERVICE     = credentials('ECS_SERVICE')
+        IMAGE_TAG       = credentials('IMAGE_TAG')
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY = credentials('SONAR_PROJECT_KEY')
