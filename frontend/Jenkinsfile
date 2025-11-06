@@ -7,9 +7,8 @@ pipeline {
         ECS_CLUSTER     = credentials('ECS_CLUSTER')
         ECS_SERVICE     = credentials('ECS_SERVICE')
         IMAGE_TAG       = credentials('IMAGE_TAG')
-        // Thêm các biến môi trường cho SonarQube
-        SONAR_CLOUD_ORG = "fpt-lab"
-        SONAR_PROJECT_KEY = "fpt-cicd-lab"
+        SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
+        SONAR_PROJECT_KEY = credentials('SONAR_PROJECT_KEY')
     }
 
     stages {
@@ -19,8 +18,6 @@ pipeline {
                 checkout scm
             }
         }
-
-        // ================= STAGE 2 ĐÃ ĐƯỢC NÂNG CẤP =================
         stage('2. SonarQube Analysis & Quality Gate Check') {
             steps {
                 dir('frontend') {
@@ -28,7 +25,6 @@ pipeline {
                         def scannerHome = tool 'SonarScanner-Version' 
 
                         withSonarQubeEnv('SonarQubeCloud') {
-                            // Bước 1: Gửi báo cáo phân tích
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
                                     -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
@@ -37,8 +33,6 @@ pipeline {
                                     -Dsonar.host.url=https://sonarcloud.io 
                             """
                         }
-
-                        // Bước 2: Đợi kết quả Quality Gate
                         // timeout(time: 15, unit: 'MINUTES') { 
                         //     def qg = waitForQualityGate abortPipeline: true
                             
