@@ -3,7 +3,8 @@
 # Sử dụng image .NET SDK chính thức làm môi trường
 FROM mcr.microsoft.com/dotnet/sdk:6.0
 
-# Nhận các biến từ lệnh `docker build` của Jenkins
+# Nhận các biến từ lệnh `docker build` của Jenkins.
+# Khai báo tất cả các ARG ở đầu.
 ARG SONAR_HOST_URL
 ARG SONAR_TOKEN
 ARG SONAR_PROJECT_KEY_BE
@@ -12,8 +13,8 @@ ARG SONAR_CLOUD_ORG
 # Đặt thư mục làm việc
 WORKDIR /usr/src
 
-# Cài đặt công cụ sonarscanner cho .NET
-# Bước này thường sẽ được Docker cache lại, giúp tăng tốc các lần chạy sau
+# Cài đặt công cụ sonarscanner cho .NET và thêm vào PATH
+# Kết hợp các lệnh RUN để tối ưu hóa layer
 RUN dotnet tool install --global dotnet-sonarscanner
 ENV PATH="$PATH:/root/.dotnet/tools"
 
@@ -21,7 +22,7 @@ ENV PATH="$PATH:/root/.dotnet/tools"
 COPY . .
 
 # Thực thi tuần tự 3 bước: begin -> build -> end
-# Lệnh này sẽ chạy, gửi báo cáo đi, và kết thúc mà không cần đợi kết quả Quality Gate
+# Lần này, chúng ta truyền giá trị của ARG SONAR_TOKEN vào cả hai lệnh begin và end.
 RUN dotnet sonarscanner begin \
         /k:"$SONAR_PROJECT_KEY_BE" \
         /o:"$SONAR_CLOUD_ORG" \

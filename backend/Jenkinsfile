@@ -30,8 +30,8 @@ pipeline {
                     steps {
                         dir('backend') {
                             script {
+                                // withSonarQubeEnv cung cấp $SONAR_TOKEN (viết hoa) và $SONAR_HOST_URL
                                 withSonarQubeEnv('SonarQubeCloud') {
-                                    // Loại bỏ --build-arg BRANCH_NAME
                                     sh """
                                         docker build -f Dockerfile.sonar -t backend-sonar-scan:latest \
                                             --build-arg SONAR_HOST_URL=\$SONAR_HOST_URL \
