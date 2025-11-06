@@ -23,3 +23,9 @@ variable "instance_profile_name" {
   description = "Tên của IAM Instance Profile để gắn vào EC2."
   type        = string
 }
+
+variable "instance_type" {
+  description = "Instance type"
+  type        = string
+  default     = "t3.medium" 
+}

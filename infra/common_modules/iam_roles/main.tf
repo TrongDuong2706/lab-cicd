@@ -1,6 +1,4 @@
-# ------------------------------------------------------------------
-#  CHỈ CẦN MỘT ROLE DUY NHẤT CHO JENKINS CONTROLLER (MÁY CHỦ EC2)
-# ------------------------------------------------------------------
+
 resource "aws_iam_role" "jenkins_controller_role" {
   name = "jenkins-controller-role-${var.environment}"
 
@@ -49,9 +47,6 @@ resource "aws_iam_role_policy_attachment" "controller_ssm_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# ------------------------------------------------------------------
-#  INSTANCE PROFILE (Vẫn bắt buộc để gắn Role vào EC2)
-# ------------------------------------------------------------------
 resource "aws_iam_instance_profile" "jenkins_controller_profile" {
   name = "jenkins-controller-profile-${var.environment}"
   role = aws_iam_role.jenkins_controller_role.name
