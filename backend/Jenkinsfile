@@ -7,6 +7,7 @@ pipeline {
         ECS_CLUSTER     = credentials('ECS_CLUSTER')
         ECS_SERVICE     = credentials('ECS_SERVICE_BE')
         IMAGE_TAG       = credentials('IMAGE_TAG')
+        // Các credentials này sẽ được Jenkins tự động nạp vào môi trường
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY_BE = credentials('SONAR_PROJECT_KEY_BE')
     }
@@ -26,28 +27,32 @@ pipeline {
                     }
                 }
 
-                // ================= STAGE 2 ĐÃ ĐƯỢC THAY THẾ HOÀN TOÀN =================
+                // ================= STAGE 2 ĐÃ ĐƯỢC SỬA LẠI HOÀN CHỈNH =================
                 stage('2. SonarQube Analysis & Quality Gate Check') {
                     steps {
                         dir('backend') {
                             script {
-                                // Sử dụng withSonarQubeEnv để lấy token từ credential 'sonar-token'
-                                // Jenkins sẽ tạo ra biến môi trường 'sonar_token' (viết thường, dấu gạch dưới)
+                                // withSonarQubeEnv sẽ cung cấp 2 biến quan trọng:
+                                // 1. SONAR_HOST_URL (https://sonarcloud.io)
+                                // 2. SONAR_TOKEN (giá trị token của bạn, VIẾT HOA)
                                 withSonarQubeEnv('SonarQubeCloud') {
                                     sh """
                                         docker run --rm \
-                                            -e SONAR_TOKEN=\$sonar_token \
+                                            -e SONAR_HOST_URL=\$SONAR_HOST_URL \
+                                            -e SONAR_TOKEN=\$SONAR_TOKEN \
+                                            -e SONAR_PROJECT_KEY_BE=\$SONAR_PROJECT_KEY_BE \
+                                            -e SONAR_CLOUD_ORG=\$SONAR_CLOUD_ORG \
                                             -v "\$(pwd):/usr/src" \
                                             -v "\$HOME/.nuget/packages:/root/.nuget/packages" \
                                             -w /usr/src \
                                             sonarsource/sonar-scanner-dotnet:latest \
                                             sh -c ' \
                                                 dotnet sonarscanner begin \
-                                                    /k:"${SONAR_PROJECT_KEY_BE}" \
-                                                    /o:"${SONAR_CLOUD_ORG}" \
-                                                    /d:sonar.host.url="https://sonarcloud.io" \
+                                                    /k:"\$SONAR_PROJECT_KEY_BE" \
+                                                    /o:"\$SONAR_CLOUD_ORG" \
+                                                    /d:sonar.host.url="\$SONAR_HOST_URL" \
                                                     /d:sonar.login="\$SONAR_TOKEN" \
-                                                    /d:sonar.branch.name="${env.BRANCH_NAME}" \
+                                                    /d:sonar.branch.name="\$BRANCH_NAME" \
                                                     /d:sonar.exclusions="**/*.html,**/obj/**,**/bin/**" \
                                                 && dotnet build App.csproj \
                                                 && dotnet sonarscanner end /d:sonar.login="\$SONAR_TOKEN" \
@@ -55,10 +60,9 @@ pipeline {
                                     """
                                 }
 
-                                // Đợi kết quả Quality Gate từ SonarCloud
+                                // Đợi kết quả Quality Gate
                                 timeout(time: 15, unit: 'MINUTES') { 
                                     def qg = waitForQualityGate abortPipeline: true
-                                    
                                     if (qg.status != 'OK') {
                                         error "Pipeline stopped due to SonarQube Quality Gate failure: \${qg.status}"
                                     } else {
