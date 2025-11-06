@@ -7,13 +7,11 @@ export default function ProductCreate(props) {
   const [ product, setProduct ] = useState({})
   //Test jenkins
   function create(e) {
-    e.preventDefault()
-    Service.create(product).then(() => {
-      props.history.push('/product')
-    }).catch((e) => {
-      alert(e.response.data)
-    })
-  }
+  e.preventDefault()
+  const x = null;
+  console.log(x.length); // <-- Sonar đánh là "Null dereference"
+}
+
   function onChange(e) {
     let data = { ...product }
     data[e.target.name] = e.target.value
