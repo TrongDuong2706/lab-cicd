@@ -20,50 +20,41 @@ pipeline {
             }
         }
 
-        // ================= STAGE MỚI: SONARQUBE ANALYSIS (ĐÃ SỬA LỖI) =================
-        stage('2. SonarQube Analysis') {
+        // ================= STAGE 2 ĐÃ ĐƯỢC NÂNG CẤP =================
+        stage('2. SonarQube Analysis & Quality Gate Check') {
             steps {
-                dir('frontend') { // Di chuyển vào thư mục chứa source code cần quét
-                    // Bọc các lệnh Groovy và steps liên quan trong khối 'script'
+                dir('frontend') {
                     script {
-                        // Sử dụng tool SonarScanner đã cấu hình trong Global Tool Configuration
                         def scannerHome = tool 'SonarScanner-Version' 
 
-                        withSonarQubeEnv('SonarQubeCloud') { // Tên đã đặt ở bước cấu hình Jenkins
+                        withSonarQubeEnv('SonarQubeCloud') {
+                            // Bước 1: Gửi báo cáo phân tích
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
                                     -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                     -Dsonar.organization=${SONAR_CLOUD_ORG} \
                                     -Dsonar.sources=. \
-                                    -Dsonar.host.url=https://sonarcloud.io 
+                                    -Dsonar.host.url=https://sonarcloud.io \
+                                    -Dsonar.branch.name=${env.BRANCH_NAME}
                             """
+                        }
+
+                        // Bước 2: Đợi kết quả Quality Gate
+                        timeout(time: 15, unit: 'MINUTES') { 
+                            def qg = waitForQualityGate abortPipeline: true
+                            
+                            if (qg.status != 'OK') {
+                                error "Pipeline stopped due to SonarQube Quality Gate failure: ${qg.status}"
+                            } else {
+                                echo "SonarQube Quality Gate passed!"
+                            }
                         }
                     }
                 }
             }
         }
-        
-        // --- Nâng cao: Chờ kết quả Quality Gate ---
-        // stage('2. SonarQube Analysis & Quality Gate') {
-        //     steps {
-        //         dir('frontend') {
-        //             script {
-        //                 def scannerHome = tool 'SonarScanner-Version'
-        //                 withSonarQubeEnv('SonarQubeCloud') {
-        //                     sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.organization=${SONAR_CLOUD_ORG} -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io"
-        //                 }
-        //                 // Tạm dừng pipeline và chờ kết quả phân tích từ SonarCloud
-        //                 // Pipeline sẽ FAILED nếu Quality Gate không đạt
-        //                 timeout(time: 15, unit: 'MINUTES') {
-        //                     waitForQualityGate abortPipeline: true
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        // =====================================================================
 
-        stage('3. Build Docker Image') { // Đánh số lại
+        stage('3. Build Docker Image') {
             steps {
                 dir('frontend') {
                     echo "Building Docker image..."
@@ -74,7 +65,7 @@ pipeline {
             }
         }
 
-        stage('4. Trivy Scan Image') { // Đánh số lại
+        stage('4. Trivy Scan Image') {
             steps {
                 dir('frontend') {
                     echo "Scanning Docker image with Trivy..."
@@ -92,7 +83,7 @@ pipeline {
             }
         }
 
-        stage('5. Authenticate ECR') { // Đánh số lại
+        stage('5. Authenticate ECR') {
             steps {
                 echo "Authenticating to ECR..."
                 sh """
@@ -102,7 +93,7 @@ pipeline {
             }
         }
 
-        stage('6. Push Docker Image to ECR') { // Đánh số lại
+        stage('6. Push Docker Image to ECR') {
             steps {
                 echo "Pushing Docker image to ECR..."
                 sh """
@@ -111,7 +102,7 @@ pipeline {
             }
         }
 
-        stage('7. Update ECS Service') { // Đánh số lại
+        stage('7. Update ECS Service') {
             steps {
                 echo "Updating ECS service to use new image..."
                 sh """
