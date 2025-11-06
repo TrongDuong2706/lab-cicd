@@ -34,8 +34,7 @@ pipeline {
                                     -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                     -Dsonar.organization=${SONAR_CLOUD_ORG} \
                                     -Dsonar.sources=. \
-                                    -Dsonar.host.url=https://sonarcloud.io \
-                                    -Dsonar.branch.name=${env.BRANCH_NAME}
+                                    -Dsonar.host.url=https://sonarcloud.io 
                             """
                         }
 
