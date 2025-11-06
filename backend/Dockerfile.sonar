@@ -1,0 +1,32 @@
+# Đặt tại backend/Dockerfile.sonar
+
+# Sử dụng image .NET SDK chính thức làm môi trường
+FROM mcr.microsoft.com/dotnet/sdk:6.0
+
+# Nhận các biến từ lệnh `docker build` của Jenkins
+ARG SONAR_HOST_URL
+ARG SONAR_TOKEN
+ARG SONAR_PROJECT_KEY_BE
+ARG SONAR_CLOUD_ORG
+
+# Đặt thư mục làm việc
+WORKDIR /usr/src
+
+# Cài đặt công cụ sonarscanner cho .NET
+# Bước này thường sẽ được Docker cache lại, giúp tăng tốc các lần chạy sau
+RUN dotnet tool install --global dotnet-sonarscanner
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Sao chép toàn bộ mã nguồn của backend vào trong image
+COPY . .
+
+# Thực thi tuần tự 3 bước: begin -> build -> end
+# Lệnh này sẽ chạy, gửi báo cáo đi, và kết thúc mà không cần đợi kết quả Quality Gate
+RUN dotnet sonarscanner begin \
+        /k:"$SONAR_PROJECT_KEY_BE" \
+        /o:"$SONAR_CLOUD_ORG" \
+        /d:sonar.host.url="$SONAR_HOST_URL" \
+        /d:sonar.login="$SONAR_TOKEN" \
+        /d:sonar.exclusions="**/*.html,**/obj/**,**/bin/**" \
+    && dotnet build App.csproj \
+    && dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

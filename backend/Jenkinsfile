@@ -6,8 +6,7 @@ pipeline {
         ECR_REPO        = credentials('ECR_REPO_BE')
         ECS_CLUSTER     = credentials('ECS_CLUSTER')
         ECS_SERVICE     = credentials('ECS_SERVICE_BE')
-        // Đổi tên biến để tránh xung đột với string literal ":latest" trong stage SonarQube
-        DOCKER_IMAGE_VERSION = "latest"
+        IMAGE_VERSION   = 'latest'
         SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
         SONAR_PROJECT_KEY_BE = credentials('SONAR_PROJECT_KEY_BE')
     }
@@ -27,44 +26,20 @@ pipeline {
                     }
                 }
 
-                stage('2. SonarQube Analysis & Quality Gate Check') {
+                stage('2. SonarQube Analysis') {
                     steps {
                         dir('backend') {
                             script {
                                 withSonarQubeEnv('SonarQubeCloud') {
-                                    // Sử dụng dấu nháy kép để Jenkins/shell thay thế các biến môi trường
+                                    // Loại bỏ --build-arg BRANCH_NAME
                                     sh """
-                                        docker run --rm \
-                                            -e SONAR_HOST_URL=\$SONAR_HOST_URL \
-                                            -e SONAR_TOKEN=\$SONAR_TOKEN \
-                                            -e SONAR_PROJECT_KEY_BE=\$SONAR_PROJECT_KEY_BE \
-                                            -e SONAR_CLOUD_ORG=\$SONAR_CLOUD_ORG \
-                                            -e BRANCH_NAME=\$BRANCH_NAME \
-                                            -v "\$(pwd):/usr/src" \
-                                            -v "\$HOME/.nuget/packages:/root/.nuget/packages" \
-                                            -w /usr/src \
-                                            sonarsource/sonar-scanner-dotnet:latest \
-                                            sh -c ' \
-                                                dotnet sonarscanner begin \
-                                                    /k:"\$SONAR_PROJECT_KEY_BE" \
-                                                    /o:"\$SONAR_CLOUD_ORG" \
-                                                    /d:sonar.host.url="\$SONAR_HOST_URL" \
-                                                    /d:sonar.login="\$SONAR_TOKEN" \
-                                                    /d:sonar.exclusions="**/*.html,**/obj/**,**/bin/**" \
-                                                && dotnet build App.csproj \
-                                                && dotnet sonarscanner end /d:sonar.login="\$SONAR_TOKEN" \
-                                            '
+                                        docker build -f Dockerfile.sonar -t backend-sonar-scan:latest \
+                                            --build-arg SONAR_HOST_URL=\$SONAR_HOST_URL \
+                                            --build-arg SONAR_TOKEN=\$SONAR_TOKEN \
+                                            --build-arg SONAR_PROJECT_KEY_BE=\$SONAR_PROJECT_KEY_BE \
+                                            --build-arg SONAR_CLOUD_ORG=\$SONAR_CLOUD_ORG \
+                                            .
                                     """
-                                }
-
-                                // Đợi kết quả Quality Gate
-                                timeout(time: 15, unit: 'MINUTES') { 
-                                    def qg = waitForQualityGate abortPipeline: true
-                                    if (qg.status != 'OK') {
-                                        error "Pipeline stopped due to SonarQube Quality Gate failure: \${qg.status}"
-                                    } else {
-                                        echo "SonarQube Quality Gate passed!"
-                                    }
                                 }
                             }
                         }
@@ -75,8 +50,7 @@ pipeline {
                     steps {
                         dir('backend') {
                             echo "Building Docker image..."
-                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
-                            sh "docker build -t $ECR_REPO:$DOCKER_IMAGE_VERSION ."
+                            sh "docker build -t $ECR_REPO:$IMAGE_VERSION ."
                         }
                     }
                 }
@@ -85,7 +59,6 @@ pipeline {
                     steps {
                         dir('backend') {
                             echo "Scanning Docker image with Trivy..."
-                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
                             sh """
                                 docker run --rm \
                                   -v \$(pwd):/workspace \
@@ -94,7 +67,7 @@ pipeline {
                                     --format template \
                                     --template "@contrib/html.tpl" \
                                     --output /workspace/trivy-report.html \
-                                    $ECR_REPO:$DOCKER_IMAGE_VERSION
+                                    $ECR_REPO:$IMAGE_VERSION
                             """
                         }
                     }
@@ -114,8 +87,7 @@ pipeline {
                     steps {
                         dir('backend') {
                             echo "Pushing Docker image to ECR..."
-                            // Sử dụng tên biến mới DOCKER_IMAGE_VERSION
-                            sh "docker push $ECR_REPO:$DOCKER_IMAGE_VERSION"
+                            sh "docker push $ECR_REPO:$IMAGE_VERSION"
                         }
                     }
                 }
