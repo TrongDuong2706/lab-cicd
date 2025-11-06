@@ -2,11 +2,13 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION  = credentials('AWS_REGION')
-        ECR_REPO    = credentials('ECR_REPO')
-        ECS_CLUSTER = credentials('ECS_CLUSTER')
-        ECS_SERVICE = credentials('ECS_SERVICE')
-        IMAGE_TAG   = credentials('IMAGE_TAG')
+        AWS_REGION      = credentials('AWS_REGION')
+        ECR_REPO        = credentials('ECR_REPO')
+        ECS_CLUSTER     = credentials('ECS_CLUSTER')
+        ECS_SERVICE     = credentials('ECS_SERVICE')
+        IMAGE_TAG       = credentials('IMAGE_TAG')
+        SONAR_CLOUD_ORG = credentials('SONAR_CLOUD_ORG')
+        SONAR_PROJECT_KEY = credentials('SONAR_PROJECT_KEY')
     }
 
     stages {
@@ -16,8 +18,36 @@ pipeline {
                 checkout scm
             }
         }
+        stage('2. SonarQube Analysis & Quality Gate Check') {
+            steps {
+                dir('frontend') {
+                    script {
+                        def scannerHome = tool 'SonarScanner-Version' 
 
-        stage('2. Build Docker Image') {
+                        withSonarQubeEnv('SonarQubeCloud') {
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                    -Dsonar.organization=${SONAR_CLOUD_ORG} \
+                                    -Dsonar.sources=. \
+                                    -Dsonar.host.url=https://sonarcloud.io 
+                            """
+                        }
+                        // timeout(time: 15, unit: 'MINUTES') { 
+                        //     def qg = waitForQualityGate abortPipeline: true
+                            
+                        //     if (qg.status != 'OK') {
+                        //         error "Pipeline stopped due to SonarQube Quality Gate failure: ${qg.status}"
+                        //     } else {
+                        //         echo "SonarQube Quality Gate passed!"
+                        //     }
+                        // }
+                    }
+                }
+            }
+        }
+
+        stage('3. Build Docker Image') {
             steps {
                 dir('frontend') {
                     echo "Building Docker image..."
@@ -28,7 +58,25 @@ pipeline {
             }
         }
 
-        stage('3. Authenticate ECR') {
+        stage('4. Trivy Scan Image') {
+            steps {
+                dir('frontend') {
+                    echo "Scanning Docker image with Trivy..."
+                    sh """
+                        docker run --rm \
+                          -v \$(pwd):/workspace \
+                          -v /var/run/docker.sock:/var/run/docker.sock \
+                          aquasec/trivy image \
+                            --format template \
+                            --template "@contrib/html.tpl" \
+                            --output /workspace/trivy-report.html \
+                            $ECR_REPO:$IMAGE_TAG
+                    """
+                }
+            }
+        }
+
+        stage('5. Authenticate ECR') {
             steps {
                 echo "Authenticating to ECR..."
                 sh """
@@ -38,7 +86,7 @@ pipeline {
             }
         }
 
-        stage('4. Push Docker Image to ECR') {
+        stage('6. Push Docker Image to ECR') {
             steps {
                 echo "Pushing Docker image to ECR..."
                 sh """
@@ -47,7 +95,7 @@ pipeline {
             }
         }
 
-        stage('5. Update ECS Service') {
+        stage('7. Update ECS Service') {
             steps {
                 echo "Updating ECS service to use new image..."
                 sh """
@@ -64,6 +112,7 @@ pipeline {
     post {
         always {
             echo "Frontend pipeline completed."
+            archiveArtifacts artifacts: 'frontend/trivy-report.html', fingerprint: true
         }
         success {
             echo "Frontend successfully deployed to ECS!"
