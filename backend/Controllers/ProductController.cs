@@ -23,8 +23,7 @@ namespace App.Controllers
         [HttpGet("api/products/{id}")]
         public async Task<IActionResult> Detail(int? id)
         {
-            // VULNERABILITY: SQL INJECTION - Chắc chắn gây lỗi Security nghiêm trọng
-            var product = await _context.Product.FromSqlRaw($"SELECT * FROM Product WHERE Id = {id}").FirstOrDefaultAsync();
+            var product = await _context.Product.FirstOrDefaultAsync(e => e.Id == id);
             return Ok(product);
         }
         [HttpPost("api/products")]
@@ -42,7 +41,6 @@ namespace App.Controllers
         [HttpPut("api/products/{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] Product model)
         {
-            // BUG: Vẫn có khả năng gây NullReferenceException ở đây
             var product = await _context.Product.FirstOrDefaultAsync(e => e.Id == id);
             product.Name = model.Name;
             product.Price = model.Price;
@@ -54,24 +52,9 @@ namespace App.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Product.FindAsync(id);
-
-            // CODE SMELL: Code bị comment lại
-            // _context.Product.Remove(product);
-            // await _context.SaveChangesAsync();
-
-            // CODE SMELL: Biến không được sử dụng
-            bool isDeleted = false;
-
+            _context.Product.Remove(product);
             await _context.SaveChangesAsync();
             return Ok();
-        }
-
-        // DUPLICATION: Phương thức này gần giống hệt phương thức Detail
-        [HttpGet("api/products/detail-copy/{id}")]
-        public async Task<IActionResult> DetailCopy(int? id)
-        {
-            var product = await _context.Product.FirstOrDefaultAsync(e => e.Id == id);
-            return Ok(product);
         }
     }
 }
